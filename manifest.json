@@ -1,0 +1,42 @@
+{
+  "name": "Mon Café — Gestionnaire Café / Snack",
+  "short_name": "Mon Café",
+  "description": "Gestionnaire de caisse pour café, snack et salon de thé au Sénégal",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff8f0",
+  "theme_color": "#E65100",
+  "lang": "fr",
+  "dir": "ltr",
+  "scope": "./",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%23E65100'/%3E%3Ctext x='50%25' y='50%25' font-size='115' text-anchor='middle' dominant-baseline='central' fill='%23fff' font-family='Arial'%3E%E2%98%95%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='102' fill='%23E65100'/%3E%3Ctext x='50%25' y='50%25' font-size='307' text-anchor='middle' dominant-baseline='central' fill='%23fff' font-family='Arial'%3E%E2%98%95%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle vente",
+      "short_name": "Vente",
+      "description": "Ouvrir l'écran de vente",
+      "url": "./index.html?tab=vente"
+    },
+    {
+      "name": "Rapports du jour",
+      "short_name": "Rapports",
+      "description": "Voir les rapports",
+      "url": "./index.html?tab=rapports"
+    }
+  ]
+}
