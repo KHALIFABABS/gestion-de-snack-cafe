@@ -11,6 +11,7 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="Mon Café">
+<link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" id="appleIcon" href="">
 <link rel="icon" id="favicon" href="">
 <title>☕ Mon Café — Gestionnaire Café / Snack</title>
@@ -288,9 +289,17 @@ input,select,textarea{font-family:inherit;font-size:15px;outline:none;}
 .mb-12{margin-bottom:12px;}
 .flex-between{display:flex;justify-content:space-between;align-items:center;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* Indicateur réseau */
+#netStatus{position:fixed;top:0;left:0;right:0;background:#C62828;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:6px;z-index:9998;transform:translateY(-100%);transition:transform .3s;}
+#netStatus.show{transform:translateY(0);}
+#netStatus.online{background:#2E7D32;}
 </style>
 </head>
 <body>
+
+<!-- Indicateur réseau -->
+<div id="netStatus">📡 Hors ligne — L'app fonctionne en local</div>
 
 <!-- ==================== SPLASH ==================== -->
 <div id="splash">
@@ -604,54 +613,16 @@ input,select,textarea{font-family:inherit;font-size:15px;outline:none;}
 
 <script>
 /* ============================================================
-   PWA — GÉNÉRATION DYNAMIQUE DU MANIFEST + ICÔNES
+   PWA — LIEN VERS LE MANIFEST STATIQUE + ICÔNES
    ============================================================ */
-(function generatePWA(){
-  const svgIcon = (size) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <rect width="${size}" height="${size}" rx="${size*0.2}" fill="#E65100"/>
-    <text x="50%" y="50%" font-size="${size*0.6}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Arial">☕</text>
-  </svg>`;
-  const icon192 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgIcon(192))));
-  const icon512 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgIcon(512))));
-  const manifest = {
-    name: "Mon Café — Gestionnaire Café / Snack",
-    short_name: "Mon Café",
-    description: "Gestionnaire de caisse pour café, snack et salon de thé au Sénégal",
-    start_url: ".", display: "standalone", orientation: "portrait",
-    background_color: "#fff8f0", theme_color: "#E65100",
-    lang: "fr", dir: "ltr", scope: ".",
-    categories: ["business", "finance", "productivity"],
-    icons: [
-      { src: icon192, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
-      { src: icon512, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
-    ],
-    shortcuts: [
-      { name: "Nouvelle vente", short_name: "Vente", description: "Ouvrir l'écran de vente", url: "./?tab=vente", icons: [{ src: icon192, sizes: "192x192" }] },
-      { name: "Rapports du jour", short_name: "Rapports", description: "Voir les rapports", url: "./?tab=rapports", icons: [{ src: icon192, sizes: "192x192" }] }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-  const manifestURL = URL.createObjectURL(blob);
-  const link = document.createElement('link');
-  link.rel = 'manifest';
-  link.href = manifestURL;
-  document.head.appendChild(link);
+(function linkPWA(){
+  // Manifest déjà lié dans <head> via <link rel="manifest" href="./manifest.json">
+  // Ici on ajoute juste les icônes iOS/favicon
+  const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%23E65100'/%3E%3Ctext x='50%25' y='50%25' font-size='115' text-anchor='middle' dominant-baseline='central' fill='%23fff' font-family='Arial'%3E%E2%98%95%3C/text%3E%3C/svg%3E";
   const ai = document.getElementById('appleIcon');
   const fi = document.getElementById('favicon');
-  if(ai) ai.href = icon192;
-  if(fi) fi.href = icon192;
-  // Apple splash screens
-  const splashes = [
-    {w:320,h:568,r:2},{w:375,h:667,r:2},{w:414,h:736,r:3},
-    {w:375,h:812,r:3},{w:414,h:896,r:2},{w:390,h:844,r:3},{w:428,h:926,r:3}
-  ];
-  splashes.forEach(s => {
-    const l = document.createElement('link');
-    l.rel = 'apple-touch-startup-image';
-    l.media = `(device-width: ${s.w}px) and (device-height: ${s.h}px) and (-webkit-device-pixel-ratio: ${s.r})`;
-    l.href = icon512;
-    document.head.appendChild(l);
-  });
+  if(ai) ai.href = iconSvg;
+  if(fi) fi.href = iconSvg;
 })();
 
 /* ============================================================
@@ -750,7 +721,7 @@ function copyDeviceId(){
 }
 
 /* ============================================================
-   EMPREINTE + PROTECTION ESSAI (5 marqueurs)
+   EMPREINTE + PROTECTION ESSAI
    ============================================================ */
 async function getDeviceFingerprint(){
   let fp=lsGet('fingerprint',null);
@@ -841,18 +812,15 @@ async function verifyLicence(code){
   if(!code)return {ok:false,err:'Licence vide'};
   code=code.trim().toUpperCase().replace(/\s+/g,'');
   const parts=code.split('-');
-  if(parts.length!==5 || parts[0]!=='BAK')return {ok:false,err:'Format invalide (attendu BAK-XXXX-XXXX-MXX-XXXXXXXX)'};
+  if(parts.length!==5 || parts[0]!=='BAK')return {ok:false,err:'Format invalide'};
   const blk2=parts[1],blk3=parts[2],blk4=parts[3],sig=parts[4];
-  if(blk2.length!==4||blk3.length!==4||sig.length!==8)return {ok:false,err:'Format invalide (longueur des blocs)'};
+  if(blk2.length!==4||blk3.length!==4||sig.length!==8)return {ok:false,err:'Format invalide'};
   let months=null;
   if(/^M\d{2}$/.test(blk4)){
     months=parseInt(blk4.slice(1),10);
-    if(months<1||months>36)return {ok:false,err:'Durée invalide (M01 à M36)'};
-  }else if(/^\d{4}$/.test(blk4)){
-    months=null;
-  }else{
-    return {ok:false,err:'Bloc durée invalide'};
-  }
+    if(months<1||months>36)return {ok:false,err:'Durée invalide'};
+  }else if(/^\d{4}$/.test(blk4)){months=null;}
+  else{return {ok:false,err:'Bloc durée invalide'};}
   const id=state.deviceId;
   const expected=await hmacSign(id+'|'+blk2+'-'+blk3+'-'+blk4);
   if(expected.slice(0,8)!==sig){
@@ -1049,7 +1017,6 @@ function startApp(){
   updateTrialBanner();
   updateLicenceInfo();
 
-  // ✅ Rafraîchir le bandeau toutes les 60s (licence qui décrémente)
   if(window._trialRefreshTimer) clearInterval(window._trialRefreshTimer);
   window._trialRefreshTimer = setInterval(()=>{
     updateTrialBanner();
@@ -1380,7 +1347,7 @@ function confirmCredit(total){
 }
 
 /* ============================================================
-   CLIENTS (CRÉDITS)
+   CLIENTS
    ============================================================ */
 function renderClients(){
   const open=state.credits.filter(c=>c.status==='open');
@@ -1740,7 +1707,7 @@ function renderClosingsHistory(){
 function showClosings(){switchTab('rapports');setTimeout(()=>{renderClosingsHistory();},100);}
 
 /* ============================================================
-   DÉPENSES / APPORT / RETRAIT
+   CAISSE
    ============================================================ */
 function openCaisseModal(type){
   const titles={depense:'💸 Dépense',apport:'📥 Apport caisse',retrait:'📤 Retrait caisse'};
@@ -1768,7 +1735,7 @@ function saveCaisse(type){
 }
 
 /* ============================================================
-   RETOUR MARCHANDISE
+   RETOUR
    ============================================================ */
 function openRetour(){
   const opts=state.products.map(p=>`<option value="${p.id}">${p.emoji} ${escapeHtml(p.name)} — ${fmt(p.price)}</option>`).join('');
@@ -1938,7 +1905,7 @@ function showAbout(){
       <div class="modal-head"><h3>ℹ️ À propos</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
       <div class="text-center" style="font-size:48px;margin-bottom:10px;">☕</div>
       <div class="text-center" style="font-size:18px;font-weight:800;color:var(--primary-dark);">Mon Café</div>
-      <div class="text-center" style="font-size:13px;color:var(--text-light);margin-top:4px;">Gestionnaire Café / Snack — Version 1.3</div>
+      <div class="text-center" style="font-size:13px;color:var(--text-light);margin-top:4px;">Gestionnaire Café / Snack — Version 1.4</div>
       <div class="divider"></div>
       <div class="recap-row"><span class="k">ID téléphone</span><span class="v" style="font-family:monospace;">${state.deviceId}</span></div>
       <div class="recap-row"><span class="k">Licence</span><span class="v">${state.licence?state.licence.type:'—'}</span></div>
@@ -1979,15 +1946,13 @@ function switchTab(tab){
   if(tab==='historique')renderHistory();
   if(tab==='rapports'){renderReports();renderClosingsHistory();}
   if(tab==='parametres')updateLicenceInfo();
-  updateTrialBanner(); // ✅ Rafraîchir le bandeau à chaque changement d'onglet
+  updateTrialBanner();
 }
 
 /* ============================================================
-   PWA — INSTALLATION (Android + iOS)
+   PWA INSTALL (Android + iOS)
    ============================================================ */
-function detectIOS(){
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-}
+function detectIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;}
 function isStandalone(){
   return window.matchMedia('(display-mode: standalone)').matches
       || window.navigator.standalone === true;
@@ -2005,11 +1970,8 @@ window.addEventListener('load', () => {
   setTimeout(() => {
     if(isStandalone()) return;
     if(lsGet('install_dismissed', false)) return;
-    if(detectIOS()){
-      showInstallBanner('ios');
-    } else if(state.deferredPrompt){
-      showInstallBanner('android');
-    }
+    if(detectIOS()){showInstallBanner('ios');}
+    else if(state.deferredPrompt){showInstallBanner('android');}
   }, 5000);
 });
 
@@ -2031,7 +1993,6 @@ function showInstallBanner(platform){
   }
   banner.classList.add('visible');
 }
-
 function installPWA(){
   if(!state.deferredPrompt){
     toast('Installation non disponible sur ce navigateur','warn');
@@ -2054,6 +2015,26 @@ window.addEventListener('appinstalled', () => {
 });
 
 /* ============================================================
+   INDICATEUR RÉSEAU
+   ============================================================ */
+function updateNetStatus(){
+  const el = $('netStatus');
+  if(!el) return;
+  if(navigator.onLine){
+    el.textContent = '🌐 En ligne';
+    el.classList.add('online');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }else{
+    el.textContent = '📡 Hors ligne — L\'app fonctionne en local';
+    el.classList.remove('online');
+    el.classList.add('show');
+  }
+}
+window.addEventListener('online', updateNetStatus);
+window.addEventListener('offline', updateNetStatus);
+
+/* ============================================================
    ANTI-MANIPULATION DATE
    ============================================================ */
 function checkDateManipulation(){
@@ -2067,7 +2048,7 @@ function checkDateManipulation(){
 }
 
 /* ============================================================
-   VISIBILITY (retour de veille)
+   VISIBILITY
    ============================================================ */
 document.addEventListener('visibilitychange', () => {
   if(!document.hidden){
@@ -2131,12 +2112,12 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(key)handlePinKey(key);
     });
   });
-  // Détecter le paramètre ?tab= (raccourcis PWA)
   const urlParams = new URLSearchParams(window.location.search);
   const startTab = urlParams.get('tab');
   if(startTab && ['vente','stock','clients','historique','rapports','parametres'].includes(startTab)){
     setTimeout(() => switchTab(startTab), 500);
   }
+  updateNetStatus();
   init();
 });
 
@@ -2168,46 +2149,26 @@ window.openLock=openLock;window.installPWA=installPWA;window.dismissInstall=dism
 window.showClosings=showClosings;
 
 /* ============================================================
-   SERVICE WORKER (offline + cache versionné)
+   SERVICE WORKER — enregistrement du fichier sw.js externe
    ============================================================ */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    const swCode = `
-      const CACHE_NAME = 'mon-cafe-v1.3.0';
-      const OFFLINE_URLS = ['./', './index.html'];
-      self.addEventListener('install', event => {
-        event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_URLS).catch(()=>{})));
-        self.skipWaiting();
+    navigator.serviceWorker.register('./sw.js', {scope: './'})
+      .then(reg => {
+        console.log('✅ Service Worker enregistré:', reg.scope);
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+              console.log('🔄 Nouvelle version disponible');
+            }
+          });
+        });
+      })
+      .catch(err => {
+        console.log('❌ SW erreur:', err);
+        console.log('⚠️ Vérifiez que sw.js est bien à côté de index.html');
       });
-      self.addEventListener('activate', event => {
-        event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
-        self.clients.claim();
-      });
-      self.addEventListener('fetch', event => {
-        if(event.request.method !== 'GET') return;
-        if(!event.request.url.startsWith('http')) return;
-        event.respondWith(
-          caches.match(event.request).then(cached => {
-            if(cached) return cached;
-            return fetch(event.request).then(response => {
-              if(response && response.status === 200 && response.type === 'basic'){
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-              }
-              return response;
-            }).catch(() => caches.match('./'));
-          })
-        );
-      });
-      self.addEventListener('message', event => {
-        if(event.data === 'SKIP_WAITING') self.skipWaiting();
-      });
-    `;
-    const blob = new Blob([swCode], {type: 'application/javascript'});
-    const url = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(url)
-      .then(reg => console.log('✅ Service Worker enregistré'))
-      .catch(err => console.log('❌ SW erreur :', err));
   });
 }
 </script>
